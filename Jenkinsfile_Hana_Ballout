@@ -10,7 +10,6 @@ pipeline {
             steps {
                 bat '"C:\\Users\\HP\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe" -m venv %VIRTUAL_ENV%'
                 bat '%VIRTUAL_ENV%\\Scripts\\python.exe -m pip install -r requirements.txt'
-                bat '%VIRTUAL_ENV%\\Scripts\\python.exe -m pip install pytest'
             }
         }
 
@@ -26,9 +25,35 @@ pipeline {
             }
         }
 
+        stage('Coverage') {
+            steps {
+                bat '%VIRTUAL_ENV%\\Scripts\\python.exe -m coverage run --source=app -m pytest tests'
+                bat '%VIRTUAL_ENV%\\Scripts\\python.exe -m coverage report -m'
+                bat '%VIRTUAL_ENV%\\Scripts\\python.exe -m coverage html'
+
+                archiveArtifacts artifacts: 'htmlcov/**',
+                                 allowEmptyArchive: false
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                bat '%VIRTUAL_ENV%\\Scripts\\python.exe -m bandit -r app.py'
+            }
+        }
+
         stage('Deploy') {
             steps {
-                echo 'Deploying application...'
+                echo 'Starting local deployment...'
+
+                bat 'if not exist deployed_app mkdir deployed_app'
+                bat 'copy /Y app.py deployed_app\\app.py'
+                bat 'dir deployed_app'
+
+                archiveArtifacts artifacts: 'deployed_app/**',
+                                 allowEmptyArchive: false
+
+                echo 'Local deployment completed successfully!'
             }
         }
     }
